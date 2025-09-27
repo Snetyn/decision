@@ -1,0 +1,25 @@
+/* stylelint-disable at-rule-no-unknown */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* stylelint-enable at-rule-no-unknown */
+
+:root {
+  --anim-drop-duration: 900ms;
+  --anim-wave-duration: 3000ms;
+  --ease-spring: cubic-bezier(.22,1.28,.32,1);
+  --jar-max-width: 100vw;
+  --jar-max-height: calc(100svh - 12rem);
+}
+
+html, body, #root { height: 100%; }
+body { 
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+.button-base { @apply rounded-xl px-4 py-3 font-medium text-base md:text-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white focus-visible:ring-opacity-30 focus-visible:ring-offset-[#0d1117] active:scale-95 transition; }
+
+.glow-green { filter: drop-shadow(0 0 6px rgba(26,214,111,0.7)) drop-shadow(0 0 14px rgba(26,214,111,0.4)); }
+
+.pattern-overlay { mix-blend-mode: overlay; pointer-events:none; }
