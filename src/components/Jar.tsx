@@ -88,8 +88,10 @@ function useSmoothed(target: number, speed = 5) {
 
 export const Jar: React.FC<JarProps> = ({ totalCount, greenShare, redShare, distortionIntensity, fillPercent, colorblind, availableHeight }) => {
   // Non-linear scaling: early decisions fill faster (ease-out power curve)
-  const scaledFillTarget = 1 - Math.pow(1 - fillPercent, 1.25); // more aggressive early fill
-  const smoothFill = useSmoothed(scaledFillTarget, 4); // a tad faster
+  // Aggressive early fill: raise exponent so small raw fill quickly approaches near-full visually.
+  // With exponent ~14: p=0.15 -> 1 - (0.85^14) ≈ 0.91 (so ~15 decisions ~90% visual level)
+  const scaledFillTarget = 1 - Math.pow(1 - fillPercent, 14);
+  const smoothFill = useSmoothed(scaledFillTarget, 4);
   const smoothGreen = useSmoothed(totalCount === 0 ? 0.5 : greenShare, 3);
 
   const liquidHeight = Math.max(2, INNER_HEIGHT * smoothFill);
