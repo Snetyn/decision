@@ -23,23 +23,8 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // Add fill overshoot animation trigger
-  const [fillTrigger, setFillTrigger] = useState(0);
-  const triggerFillAnimation = useCallback(() => {
-    setFillTrigger(prev => prev + 1);
-  }, []);
-
-  const handleGood = useCallback(() => { 
-    addGood(); 
-    spawnDrop('good'); 
-    triggerFillAnimation();
-  }, [addGood, spawnDrop, triggerFillAnimation]);
-  
-  const handleBad = useCallback(() => { 
-    addBad(); 
-    spawnDrop('bad'); 
-    triggerFillAnimation();
-  }, [addBad, spawnDrop, triggerFillAnimation]);
+  const handleGood = useCallback(() => { addGood(); spawnDrop('good'); }, [addGood, spawnDrop]);
+  const handleBad = useCallback(() => { addBad(); spawnDrop('bad'); }, [addBad, spawnDrop]);
 
   // Dynamic height calc so jar fills remaining viewport between top bar and controls (mobile optimization)
   const topRef = useRef<HTMLDivElement | null>(null);
@@ -81,7 +66,6 @@ export const App: React.FC = () => {
             fillPercent={fillPercent}
             colorblind={colorblind}
             availableHeight={availableHeight}
-            fillTrigger={fillTrigger}
           />
           <DecisionDropLayer drops={drops} greenShare={greenShare} redShare={redShare} totalCount={totalCount} />
           <div className="absolute top-4 right-4 flex gap-2 text-xs">

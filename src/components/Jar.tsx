@@ -97,25 +97,11 @@ function useSmoothed(target: number, speed = 5) {
   return value;
 }
 
-export const Jar: React.FC<JarProps> = ({ totalCount, greenShare, redShare, distortionIntensity, fillPercent, colorblind, availableHeight, fillTrigger }) => {
-  // Smoothed fill & ratio so liquid rises gradually and color does not flicker
-  const baseFill = useSmoothed(fillPercent, 2.2);
+export const Jar: React.FC<JarProps> = ({ totalCount, greenShare, redShare, distortionIntensity, fillPercent, colorblind, availableHeight }) => {
+  // Non-linear scaling: early decisions fill faster (ease-out power curve)
+  const scaledFillTarget = 1 - Math.pow(1 - fillPercent, 1.6); // power < 2 => quicker early growth
+  const smoothFill = useSmoothed(scaledFillTarget, 3);
   const smoothGreen = useSmoothed(totalCount === 0 ? 0.5 : greenShare, 3);
-  
-  // Overshoot animation: briefly spike fill when fillTrigger changes
-  const [overshootFill, setOvershootFill] = useState(baseFill);
-  
-  useEffect(() => {
-    if (fillTrigger && fillTrigger > 0) {
-      // Spike up then settle back
-      const overshoot = Math.min(1, baseFill + 0.15); // 15% overshoot
-      setOvershootFill(overshoot);
-      const timer = setTimeout(() => setOvershootFill(baseFill), 280);
-      return () => clearTimeout(timer);
-    }
-  }, [fillTrigger, baseFill]);
-  
-  const smoothFill = useSmoothed(overshootFill, 4.5); // faster response for overshoot effect
 
   const amplitude = 2 + distortionIntensity * 4;
   const liquidHeight = Math.max(2, INNER_HEIGHT * smoothFill);
@@ -133,9 +119,7 @@ export const Jar: React.FC<JarProps> = ({ totalCount, greenShare, redShare, dist
   const blurStdDev = distortionIntensity * 2.4;
   const turbulenceSeed = Math.round(8 + distortionIntensity * 20);
 
-  const bubbleX = 60 + (WIDTH - 120) * smoothGreen;
-  const bubbleY = Math.min(rectY + 40, LIQUID_BOTTOM - 40);
-  const bubbleGlow = smoothGreen > redShare ? 'filter:url(#bubbleGlow)' : '';
+  // Bubble removed per user request (was considered unnecessary)
 
   // Compute scaled height for SVG to fit availableHeight while keeping aspect ratio
   const aspect = HEIGHT / WIDTH;
@@ -223,20 +207,7 @@ export const Jar: React.FC<JarProps> = ({ totalCount, greenShare, redShare, dist
           )}
         </g>
 
-        {totalCount > 0 && (
-          <motion.circle
-            cx={bubbleX}
-            cy={bubbleY}
-            r={18}
-            fill={highlightColor}
-            stroke={adjustColor(liquidColor, -0.35)}
-            strokeWidth={2}
-            opacity={0.9}
-            className={bubbleGlow}
-            animate={{ opacity: [0.85, 0.92, 0.85] }}
-            transition={{ repeat: Infinity, duration: 5.2, ease: 'easeInOut' }}
-          />
-        )}
+        {/* Bubble removed */}
       </svg>
     </div>
   );
