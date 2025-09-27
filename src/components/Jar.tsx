@@ -11,11 +11,16 @@ interface JarProps {
   availableHeight?: number; // dynamic space allotted from layout
 }
 
-const WIDTH = 300;
-const HEIGHT = 500;
-const INNER_HEIGHT = 400;
-const LIQUID_TOP = 70;
-const LIQUID_BOTTOM = LIQUID_TOP + INNER_HEIGHT;
+const WIDTH = 300;              // Base design width
+const HEIGHT = 500;             // Base design height
+// New tighter padding so liquid appears larger relative to viewport
+const PAD_X = 14;
+const PAD_Y = 14;
+const CORNER = 36;
+// Inner vertical bounds for liquid (nearly full height now)
+const LIQUID_TOP = PAD_Y + 6; // small breathing room for wave
+const LIQUID_BOTTOM = HEIGHT - (PAD_Y + 6);
+const INNER_HEIGHT = LIQUID_BOTTOM - LIQUID_TOP;
 const GOOD_RGB = [26, 214, 111] as const;
 const BAD_RGB = [255, 59, 48] as const;
 const NEUTRAL_RGB = [130, 150, 170] as const; // Cooler neutral tone
@@ -125,14 +130,14 @@ export const Jar: React.FC<JarProps> = ({ totalCount, greenShare, redShare, dist
     <div className="relative flex items-center justify-center overflow-hidden" style={{ height: targetH, width: '100%' }}>
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        style={{ height: targetH, width: targetW, maxWidth: '100%' }}
+        style={{ height: targetH, width: '100%', maxWidth: 480 }}
         preserveAspectRatio="xMidYMid meet"
         role="img"
         aria-label="Decision balance jar"
       >
         <defs>
           <clipPath id="liquid-clip">
-            <rect x="20" y="20" width={WIDTH - 40} height={HEIGHT - 40} rx="36" ry="36" />
+            <rect x={PAD_X} y={PAD_Y} width={WIDTH - PAD_X * 2} height={HEIGHT - PAD_Y * 2} rx={CORNER} ry={CORNER} />
           </clipPath>
           <linearGradient id="liquid-gradient" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor={highlightColor} stopOpacity={0.95} />
@@ -158,13 +163,13 @@ export const Jar: React.FC<JarProps> = ({ totalCount, greenShare, redShare, dist
           )}
         </defs>
 
-        <rect x="20" y="20" width={WIDTH - 40} height={HEIGHT - 40} rx="36" ry="36" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.25)" strokeWidth="3" />
+  <rect x={PAD_X} y={PAD_Y} width={WIDTH - PAD_X * 2} height={HEIGHT - PAD_Y * 2} rx={CORNER} ry={CORNER} fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.25)" strokeWidth="3" />
 
         <g clipPath="url(#liquid-clip)">
           <motion.rect
-            x={30}
+            x={PAD_X + 10}
             y={rectY}
-            width={WIDTH - 60}
+            width={WIDTH - (PAD_X + 10) * 2}
             height={liquidHeight}
             rx={28}
             fill="url(#liquid-gradient)"
@@ -176,7 +181,7 @@ export const Jar: React.FC<JarProps> = ({ totalCount, greenShare, redShare, dist
             }}
             style={{ filter: 'url(#distort)' }}
           />
-          {/* Wave now subtle vertical breathing only when fill changes */}
+          {/* Restored animated wave for perceived fluid motion */}
           <motion.path
             d={wavePath}
             stroke={highlightColor}
@@ -185,12 +190,20 @@ export const Jar: React.FC<JarProps> = ({ totalCount, greenShare, redShare, dist
             strokeLinecap="round"
             strokeLinejoin="round"
             initial={false}
-            animate={{ stroke: highlightColor }}
-            transition={{ stroke: { duration: 0.5 } }}
+            animate={{
+              x: [-12, 12, -12],
+              y: [0, amplitude * 0.45, 0],
+              stroke: highlightColor
+            }}
+            transition={{
+              x: { repeat: Infinity, duration: 6, ease: 'easeInOut' },
+              y: { repeat: Infinity, duration: 6, ease: 'easeInOut' },
+              stroke: { duration: 0.6 }
+            }}
             style={{ filter: 'url(#distort)' }}
           />
           {colorblind && (
-            <rect x="20" y="20" width={WIDTH - 40} height={HEIGHT - 40} fill="url(#pattern-stripes)" className="pattern-overlay" />
+            <rect x={PAD_X} y={PAD_Y} width={WIDTH - PAD_X * 2} height={HEIGHT - PAD_Y * 2} fill="url(#pattern-stripes)" className="pattern-overlay" />
           )}
         </g>
 
