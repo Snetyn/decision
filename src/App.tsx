@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useDecisions } from './hooks/useDecisions';
 import { Jar } from './components/Jar';
 import { Controls } from './components/Controls';
@@ -11,6 +11,36 @@ export const App: React.FC = () => {
   const [drops, setDrops] = useState<DropSpec[]>([]);
   const [colorblind, setColorblind] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstall, setShowInstall] = useState(false);
+
+  // PWA install prompt handling
+  useEffect(() => {
+    const dismissed = localStorage.getItem('pwa_install_dismissed');
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      if (!dismissed) setShowInstall(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = useCallback(async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice.catch(() => null);
+    if (choice && choice.outcome !== 'accepted') {
+      localStorage.setItem('pwa_install_dismissed', '1');
+    }
+    setShowInstall(false);
+    setDeferredPrompt(null);
+  }, [deferredPrompt]);
+
+  const dismissInstall = useCallback(() => {
+    localStorage.setItem('pwa_install_dismissed', '1');
+    setShowInstall(false);
+  }, []);
 
   const spawnDrop = useCallback((color: 'good' | 'bad') => {
     const id = Date.now() + Math.random();
@@ -88,6 +118,15 @@ export const App: React.FC = () => {
       <footer ref={footerRef} className="w-full">
         <Controls onGood={handleGood} onBad={handleBad} onUndo={undo} onToggleWhatIf={toggleWhatIf} whatIfMode={whatIfMode} />
       </footer>
+      {showInstall && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40">
+          <div className="flex items-center gap-3 rounded-xl border border-white/15 bg-black/70 backdrop-blur-md px-4 py-3 shadow-lg">
+            <span className="text-xs sm:text-sm text-white/80">Install Decision Jar?</span>
+            <button onClick={handleInstallClick} className="px-3 py-1 text-xs rounded-lg bg-goodGreen/25 border border-goodGreen/60 hover:bg-goodGreen/35 text-goodGreen font-medium">Install</button>
+            <button onClick={dismissInstall} className="px-2 py-1 text-xs rounded-lg bg-white/10 hover:bg-white/15 border border-white/20">Later</button>
+          </div>
+        </div>
+      )}
       <SettingsPanel
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
