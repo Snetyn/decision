@@ -8,6 +8,7 @@ interface JarProps {
   distortionIntensity: number;
   fillPercent: number;
   colorblind?: boolean;
+  availableHeight?: number; // dynamic space allotted from layout
 }
 
 const WIDTH = 300;
@@ -90,7 +91,7 @@ function useSmoothed(target: number, speed = 5) {
   return value;
 }
 
-export const Jar: React.FC<JarProps> = ({ totalCount, greenShare, redShare, distortionIntensity, fillPercent, colorblind }) => {
+export const Jar: React.FC<JarProps> = ({ totalCount, greenShare, redShare, distortionIntensity, fillPercent, colorblind, availableHeight }) => {
   // Smoothed fill & ratio so liquid rises gradually and color does not flicker
   const smoothFill = useSmoothed(fillPercent, 2.2);
   const smoothGreen = useSmoothed(totalCount === 0 ? 0.5 : greenShare, 3);
@@ -115,11 +116,16 @@ export const Jar: React.FC<JarProps> = ({ totalCount, greenShare, redShare, dist
   const bubbleY = Math.min(rectY + 40, LIQUID_BOTTOM - 40);
   const bubbleGlow = smoothGreen > redShare ? 'filter:url(#bubbleGlow)' : '';
 
+  // Compute scaled height for SVG to fit availableHeight while keeping aspect ratio
+  const aspect = HEIGHT / WIDTH;
+  const targetH = availableHeight && availableHeight > 0 ? Math.min(availableHeight, HEIGHT * 1.05) : HEIGHT;
+  const targetW = targetH / aspect;
+
   return (
-    <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+    <div className="relative flex items-center justify-center overflow-hidden" style={{ height: targetH, width: '100%' }}>
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="w-full h-full object-contain"
+        style={{ height: targetH, width: targetW, maxWidth: '100%' }}
         preserveAspectRatio="xMidYMid meet"
         role="img"
         aria-label="Decision balance jar"
