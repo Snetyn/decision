@@ -4,11 +4,13 @@ import { Jar } from './components/Jar';
 import { Controls } from './components/Controls';
 import { TopBar } from './components/TopBar';
 import { DecisionDropLayer, DropSpec } from './components/DecisionDropLayer';
+import { SettingsPanel } from './components/SettingsPanel';
 
 export const App: React.FC = () => {
-  const { goodCount, badCount, totalCount, greenShare, redShare, distortionIntensity, fillPercent, addGood, addBad, undo, whatIfMode, toggleWhatIf } = useDecisions();
+  const { goodCount, badCount, totalCount, greenShare, redShare, distortionIntensity, fillPercent, addGood, addBad, undo, whatIfMode, toggleWhatIf, resetToday, history, clearHistory } = useDecisions();
   const [drops, setDrops] = useState<DropSpec[]>([]);
   const [colorblind, setColorblind] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const spawnDrop = useCallback((color: 'good' | 'bad') => {
     const id = Date.now() + Math.random();
@@ -89,12 +91,26 @@ export const App: React.FC = () => {
             >
               CB Mode
             </button>
+            <button
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Open settings"
+              className="px-3 py-2 rounded-lg border border-white/20 bg-white/10 hover:bg-white/15"
+            >
+              ⚙️
+            </button>
           </div>
         </div>
       </div>
       <footer ref={footerRef} className="w-full">
         <Controls onGood={handleGood} onBad={handleBad} onUndo={undo} onToggleWhatIf={toggleWhatIf} whatIfMode={whatIfMode} />
       </footer>
+      <SettingsPanel
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onResetToday={() => { resetToday(); setSettingsOpen(false); }}
+        onClearHistory={() => { clearHistory(); }}
+        history={history}
+      />
     </div>
   );
 };
