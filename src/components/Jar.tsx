@@ -9,6 +9,7 @@ interface JarProps {
   fillPercent: number;
   colorblind?: boolean;
   availableHeight?: number; // dynamic space allotted from layout
+  fillTrigger?: number; // trigger counter for overshoot animation
 }
 
 const WIDTH = 300;              // Base design width
@@ -96,10 +97,25 @@ function useSmoothed(target: number, speed = 5) {
   return value;
 }
 
-export const Jar: React.FC<JarProps> = ({ totalCount, greenShare, redShare, distortionIntensity, fillPercent, colorblind, availableHeight }) => {
+export const Jar: React.FC<JarProps> = ({ totalCount, greenShare, redShare, distortionIntensity, fillPercent, colorblind, availableHeight, fillTrigger }) => {
   // Smoothed fill & ratio so liquid rises gradually and color does not flicker
-  const smoothFill = useSmoothed(fillPercent, 2.2);
+  const baseFill = useSmoothed(fillPercent, 2.2);
   const smoothGreen = useSmoothed(totalCount === 0 ? 0.5 : greenShare, 3);
+  
+  // Overshoot animation: briefly spike fill when fillTrigger changes
+  const [overshootFill, setOvershootFill] = useState(baseFill);
+  
+  useEffect(() => {
+    if (fillTrigger && fillTrigger > 0) {
+      // Spike up then settle back
+      const overshoot = Math.min(1, baseFill + 0.15); // 15% overshoot
+      setOvershootFill(overshoot);
+      const timer = setTimeout(() => setOvershootFill(baseFill), 280);
+      return () => clearTimeout(timer);
+    }
+  }, [fillTrigger, baseFill]);
+  
+  const smoothFill = useSmoothed(overshootFill, 4.5); // faster response for overshoot effect
 
   const amplitude = 2 + distortionIntensity * 4;
   const liquidHeight = Math.max(2, INNER_HEIGHT * smoothFill);
@@ -123,14 +139,14 @@ export const Jar: React.FC<JarProps> = ({ totalCount, greenShare, redShare, dist
 
   // Compute scaled height for SVG to fit availableHeight while keeping aspect ratio
   const aspect = HEIGHT / WIDTH;
-  const targetH = availableHeight && availableHeight > 0 ? Math.min(availableHeight, HEIGHT * 1.05) : HEIGHT;
+  const targetH = availableHeight && availableHeight > 0 ? Math.min(availableHeight, HEIGHT * 1.2) : HEIGHT;
   const targetW = targetH / aspect;
 
   return (
     <div className="relative flex items-center justify-center overflow-hidden" style={{ height: targetH, width: '100%' }}>
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        style={{ height: targetH, width: '100%', maxWidth: 480 }}
+        style={{ height: '100%', width: '100%', maxHeight: targetH, maxWidth: '100vw' }}
         preserveAspectRatio="xMidYMid meet"
         role="img"
         aria-label="Decision balance jar"

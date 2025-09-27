@@ -21,8 +21,23 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  const handleGood = useCallback(() => { addGood(); spawnDrop('good'); }, [addGood, spawnDrop]);
-  const handleBad = useCallback(() => { addBad(); spawnDrop('bad'); }, [addBad, spawnDrop]);
+  // Add fill overshoot animation trigger
+  const [fillTrigger, setFillTrigger] = useState(0);
+  const triggerFillAnimation = useCallback(() => {
+    setFillTrigger(prev => prev + 1);
+  }, []);
+
+  const handleGood = useCallback(() => { 
+    addGood(); 
+    spawnDrop('good'); 
+    triggerFillAnimation();
+  }, [addGood, spawnDrop, triggerFillAnimation]);
+  
+  const handleBad = useCallback(() => { 
+    addBad(); 
+    spawnDrop('bad'); 
+    triggerFillAnimation();
+  }, [addBad, spawnDrop, triggerFillAnimation]);
 
   // Dynamic height calc so jar fills remaining viewport between top bar and controls (mobile optimization)
   const topRef = useRef<HTMLDivElement | null>(null);
@@ -33,8 +48,9 @@ export const App: React.FC = () => {
     const measure = () => {
       const topH = topRef.current?.offsetHeight || 0;
       const footH = footerRef.current?.offsetHeight || 0;
-      const vh = window.innerHeight; // includes browser UI safe area if using svh in CSS elsewhere
-      const next = Math.max(140, vh - topH - footH); // ensure reasonable minimum
+      const vh = window.innerHeight;
+      // Add some padding to prevent jar touching edges, ensure minimum usable height
+      const next = Math.max(280, vh - topH - footH - 32); // increased minimum, added padding
       setAvailableHeight(next);
     };
     measure();
@@ -63,6 +79,7 @@ export const App: React.FC = () => {
             fillPercent={fillPercent}
             colorblind={colorblind}
             availableHeight={availableHeight}
+            fillTrigger={fillTrigger}
           />
           <DecisionDropLayer drops={drops} greenShare={greenShare} redShare={redShare} totalCount={totalCount} />
           <div className="absolute top-4 right-4 flex gap-2 text-xs">
