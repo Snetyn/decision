@@ -14,13 +14,11 @@ interface JarProps {
 
 const WIDTH = 300;              // Base design width
 const HEIGHT = 500;             // Base design height
-// New tighter padding so liquid appears larger relative to viewport
 const PAD_X = 14;
 const PAD_Y = 14;
 const CORNER = 36;
-// Inner vertical bounds for liquid (nearly full height now)
-const LIQUID_TOP = PAD_Y + 6; // small breathing room for wave
-const LIQUID_BOTTOM = HEIGHT - (PAD_Y + 6);
+const LIQUID_TOP = PAD_Y + 4; // minimal top padding
+const LIQUID_BOTTOM = HEIGHT - (PAD_Y + 4);
 const INNER_HEIGHT = LIQUID_BOTTOM - LIQUID_TOP;
 const GOOD_RGB = [26, 214, 111] as const;
 const BAD_RGB = [255, 59, 48] as const;
@@ -64,16 +62,7 @@ export const adjustColor = (color: string, factor: number) => {
   return `rgb(${adjusted[0]}, ${adjusted[1]}, ${adjusted[2]})`;
 };
 
-function buildWaveLine(amplitude: number, phase: number, surfaceY: number) {
-  const points: string[] = [];
-  const steps = 32;
-  for (let i = 0; i <= steps; i++) {
-    const x = (i / steps) * WIDTH;
-    const y = surfaceY + Math.sin((i / steps) * Math.PI * 2 + phase) * amplitude;
-    points.push(`${x},${y}`);
-  }
-  return `M0 ${surfaceY} ` + points.map(p => `L${p}`).join(' ');
-}
+// (Wave removed for simple fill mode)
 
 // Hook to smoothly approach a target number (for fill and ratio smoothing)
 function useSmoothed(target: number, speed = 5) {
@@ -99,25 +88,19 @@ function useSmoothed(target: number, speed = 5) {
 
 export const Jar: React.FC<JarProps> = ({ totalCount, greenShare, redShare, distortionIntensity, fillPercent, colorblind, availableHeight }) => {
   // Non-linear scaling: early decisions fill faster (ease-out power curve)
-  const scaledFillTarget = 1 - Math.pow(1 - fillPercent, 1.6); // power < 2 => quicker early growth
-  const smoothFill = useSmoothed(scaledFillTarget, 3);
+  const scaledFillTarget = 1 - Math.pow(1 - fillPercent, 1.25); // more aggressive early fill
+  const smoothFill = useSmoothed(scaledFillTarget, 4); // a tad faster
   const smoothGreen = useSmoothed(totalCount === 0 ? 0.5 : greenShare, 3);
 
-  const amplitude = 2 + distortionIntensity * 4;
   const liquidHeight = Math.max(2, INNER_HEIGHT * smoothFill);
   const rectY = LIQUID_BOTTOM - liquidHeight;
-  const surfaceY = rectY + Math.min(18, Math.max(8, amplitude * 1.6));
+  const surfaceY = rectY; // no wave offset
 
   const liquidColor = mixDecisionColor(smoothGreen, totalCount);
   const highlightColor = adjustColor(liquidColor, 0.18);
   const deepColor = adjustColor(liquidColor, -0.22);
 
-  const wavePath = useMemo(() => buildWaveLine(amplitude, 0, surfaceY), [amplitude, surfaceY]);
-
-  const baseFrequency = 0.0008 + distortionIntensity * 0.012;
-  const displacementScale = distortionIntensity * 30;
-  const blurStdDev = distortionIntensity * 2.4;
-  const turbulenceSeed = Math.round(8 + distortionIntensity * 20);
+  // Distortion & wave removed for simple variant
 
   // Bubble removed per user request (was considered unnecessary)
 
@@ -140,22 +123,9 @@ export const Jar: React.FC<JarProps> = ({ totalCount, greenShare, redShare, dist
             <rect x={PAD_X} y={PAD_Y} width={WIDTH - PAD_X * 2} height={HEIGHT - PAD_Y * 2} rx={CORNER} ry={CORNER} />
           </clipPath>
           <linearGradient id="liquid-gradient" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor={highlightColor} stopOpacity={0.95} />
-            <stop offset="100%" stopColor={deepColor} stopOpacity={0.98} />
+            <stop offset="0%" stopColor={highlightColor} stopOpacity={0.97} />
+            <stop offset="100%" stopColor={deepColor} stopOpacity={0.99} />
           </linearGradient>
-          <filter id="distort" x="-20%" y="-20%" width="140%" height="140%">
-            <feTurbulence type="turbulence" baseFrequency={baseFrequency} numOctaves="3" seed={turbulenceSeed} result="turb" />
-            <feDisplacementMap in="SourceGraphic" in2="turb" scale={displacementScale} xChannelSelector="R" yChannelSelector="G" />
-            <feGaussianBlur stdDeviation={blurStdDev} />
-          </filter>
-          <filter id="bubbleGlow">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
-            <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0  0 0 0 0 1  0 0 0 0 0.5  0 0 0 1 0" result="col" />
-            <feMerge>
-              <feMergeNode in="col" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
           {colorblind && (
             <pattern id="pattern-stripes" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
               <rect width="4" height="8" fill="rgba(255,255,255,0.25)" />
@@ -167,47 +137,25 @@ export const Jar: React.FC<JarProps> = ({ totalCount, greenShare, redShare, dist
 
         <g clipPath="url(#liquid-clip)">
           <motion.rect
-            x={PAD_X + 10}
+            x={PAD_X + 8}
             y={rectY}
-            width={WIDTH - (PAD_X + 10) * 2}
+            width={WIDTH - (PAD_X + 8) * 2}
             height={liquidHeight}
             rx={28}
             fill="url(#liquid-gradient)"
             initial={false}
             animate={{ y: rectY, height: liquidHeight }}
             transition={{
-              y: { type: 'spring', stiffness: 120, damping: 24 },
-              height: { type: 'spring', stiffness: 120, damping: 24 }
+              y: { duration: 0.45, ease: 'easeOut' },
+              height: { duration: 0.45, ease: 'easeOut' }
             }}
-            style={{ filter: 'url(#distort)' }}
-          />
-          {/* Restored animated wave for perceived fluid motion */}
-          <motion.path
-            d={wavePath}
-            stroke={highlightColor}
-            strokeWidth={12}
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            initial={false}
-            animate={{
-              x: [-12, 12, -12],
-              y: [0, amplitude * 0.45, 0],
-              stroke: highlightColor
-            }}
-            transition={{
-              x: { repeat: Infinity, duration: 6, ease: 'easeInOut' },
-              y: { repeat: Infinity, duration: 6, ease: 'easeInOut' },
-              stroke: { duration: 0.6 }
-            }}
-            style={{ filter: 'url(#distort)' }}
           />
           {colorblind && (
             <rect x={PAD_X} y={PAD_Y} width={WIDTH - PAD_X * 2} height={HEIGHT - PAD_Y * 2} fill="url(#pattern-stripes)" className="pattern-overlay" />
           )}
         </g>
 
-        {/* Bubble removed */}
+        {/* Simple mode: no wave / bubble */}
       </svg>
     </div>
   );
